@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>TOASTER 1024 — SCADA PRO SIMULATOR</title>
+
+<style>
+  body {
+    margin:0;
+    background:#000;
+    color:#fff;
+    font-family:system-ui, sans-serif;
+    overflow-x:hidden;
+  }
+  #header {
+    padding:16px;
+    font-size:22px;
+    font-weight:700;
+    letter-spacing:1px;
+    border-bottom:1px solid #333;
+    background:#111;
+  }
+  #container {
+    display:flex;
+    gap:16px;
+    padding:16px;
+  }
+  #heatmap {
+    flex:2;
+    display:grid;
+    grid-template-columns: repeat(32,1fr);
+    gap:2px;
+    margin-right:16px;
+  }
+  .cell {
+    width:100%;
+    padding-bottom:100%;
+    border-radius:2px;
+    background:#222;
+    transition: background 0.05s linear;
+  }
+
+  #side {
+    flex:1;
+    background:#111;
+    padding:12px;
+    border-radius:8px;
+    border:1px solid #333;
+    overflow-y:auto;
+    max-height:90vh;
+  }
+  h2 {
+    margin-top:0;
+    font-size:18px;
+    border-bottom:1px solid #444;
+    padding-bottom:4px;
+  }
+
+  .sm-panel {
+    margin-bottom:10px;
+    padding:8px;
+    background:#1a1a1a;
+    border:1px solid #333;
+    border-radius:6px;
+  }
+  .sm-panel .title {
+    font-size:14px;
+    margin-bottom:4px;
+    color:#ffa500;
+  }
+  .sm-stat {
+    font-size:12px;
+    color:#ccc;
+  }
+
+  .alarm {
+    color:#ff4444;
+    font-weight:bold;
+  }
+</style>
+</head>
+
+<body>
+<div id="header">TOASTER 1024 core — SCADA PRO SIMULATOR</div>
+
+<div id="container">
+  <div id="heatmap"></div>
+  <div id="side">
+    <h2>System Overview</h2>
+    <div id="timestamp"></div>
+    <div id="activeCount"></div>
+    <div id="avgTemp"></div>
+    <br>
+
+    <h2>SM Status (LIVE)</h2>
+    <div id="smStatus"></div>
+  </div>
+</div>
+
+<script>
+/*****************************************************************************
+ * ADVANCED SCADA SIMULATOR
+ * — 128 SMs × 8 lanes = 1024 lanes
+ * — Physics engine
+ * — Thermal drift
+ * — Browning kinetics
+ * — Alarm thresholds
+ * — SM panels
+ * — Always renders
+ *****************************************************************************/
+
+const SMS = 128;
+const LANES_PER_SM = 8;
+const TOTAL = SMS * LANES_PER_SM;
+
+const heatmap = document.getElementById("heatmap");
+const timestampEl = document.getElementById("timestamp");
+const activeCountEl = document.getElementById("activeCount");
+const avgTempEl = document.getElementById("avgTemp");
+const smStatusEl = document.getElementById("smStatus");
+
+// CREATE UI CELLS
+const lanes = [];
+for (let i = 0; i < TOTAL; i++) {
+  const div = document.createElement("div");
+  div.className = "cell";
+  heatmap.appendChild(div);
+  lanes.push({
+    idx: i,
+    sm: Math.floor(i / LANES_PER_SM),
+    temp: 120 + Math.random()*30,
+    color: Math.random()*0.1,
+    el: div,
+    active: true
+  });
+}
+
+// SIMULATION STEP
+function simulate() {
+  const now = new Date().toLocaleTimeString();
+  timestampEl.innerHTML = `<b>Time:</b> ${now}`;
+
+  let active = 0;
+  let tempSum = 0;
+
+  // SM Summary Data
+  const smTemps = new Array(SMS).fill(0);
+  const smCounts = new Array(SMS).fill(0);
+
+  for (const lane of lanes) {
+    // Physics: heat drift
+    lane.temp += 0.4 + (Math.random()*4 - 2);
+    if (lane.temp > 260) lane.temp = 120 + Math.random()*40;
+
+    // "Browning"
+    lane.color = Math.min(1, lane.color + lane.temp * 0.0005);
+
+    // Alarms
+    lane.active = lane.temp < 250;
+
+    // UI Color
+    const intensity = lane.color;
+    const hue = 45 - intensity * 45;
+    const light = 30 + intensity * 25;
+    lane.el.style.background = lane.active
+      ? `hsl(${hue}, 90%, ${light}%)`
+      : `#440000`;
+
+    lane.el.title =
+      `Lane ${lane.idx}\n` +
+      `SM ${lane.sm}\n` +
+      `Temp: ${lane.temp.toFixed(1)}°C\n` +
+      `Color: ${lane.color.toFixed(2)}`;
+
+    // Stats
+    tempSum += lane.temp;
+    if (lane.active) active++;
+
+    smTemps[lane.sm] += lane.temp;
+    smCounts[lane.sm]++;
+  }
+
+  activeCountEl.innerHTML = `<b>Active Lanes:</b> ${active} / ${TOTAL}`;
+  avgTempEl.innerHTML = `<b>Average Temp:</b> ${(tempSum / TOTAL).toFixed(1)}°C`;
+
+  // SM Panels
+  smStatusEl.innerHTML = "";
+  for (let s = 0; s < SMS; s++) {
+    const smTemp = smTemps[s] / smCounts[s];
+    const alarm = smTemp > 240 ? `<span class="alarm"> OVERHEAT </span>` : "";
+
+    const card = document.createElement("div");
+    card.className = "sm-panel";
+    card.innerHTML = `
+      <div class="title">SM #${s}</div>
+      <div class="sm-stat">Temp: ${smTemp.toFixed(1)}°C ${alarm}</div>
+      <div class="sm-stat">Lanes: ${smCounts[s]}</div>
+    `;
+    smStatusEl.appendChild(card);
+  }
+
+  requestAnimationFrame(simulate);
+}
+
+simulate();
+</script>
+</body>
+</html>
