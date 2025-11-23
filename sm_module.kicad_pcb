@@ -1,0 +1,13 @@
+(kicad_pcb (version 20211014)
+  (general (title "Toaster1024 Module PCB"))
+  (layers 
+    (0 F.Cu signal)
+    (31 B.Cu signal)
+    (32 F.Mask user)
+    (33 B.Mask user)
+  )
+  (module MCU_STM32G070 (at 40 40))
+  (module MOSFET_DRIVER (at 80 40))
+  (module IR_SENSOR (at 20 80))
+  (module LOAD_CELL_IFACE (at 60 80))
+)
