@@ -1,0 +1,1 @@
+This is for a superscaler toaster (yes a toaster) based on the PT8A2514A - Toaster Controller. Its just for fun, but honestly who wouldn't want to have a 1024 slot toaster? Imagine all the toast you could produce at scale.
